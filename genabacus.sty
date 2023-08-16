@@ -1,0 +1,530 @@
+\ProvidesPackage{genabacus}
+\RequirePackage{tikz}
+\RequirePackage{float}
+\RequirePackage{ifthen}
+\RequirePackage{graphics}
+\RequirePackage{pgf}
+
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{positioning}
+\usetikzlibrary{cd}
+\usetikzlibrary{fadings}
+\usetikzlibrary{fit}
+\usetikzlibrary{backgrounds}
+
+\ExplSyntaxOn
+
+\group_begin:
+  \cs_new_protected:Npn \bool_set_from_tl:NN #1#2 {
+    \ifthenelse{\equal{#2}{true}}{ \bool_set_true:N #1 } { \bool_set_false:N #1 }
+  }
+
+  \cs_set:Nn \clist_set_globals: {
+    \clist_if_exist:NTF \g_lists_clist {\clist_gclear:N \g_lists_clist}{\clist_new:N \g_lists_clist}
+    \clist_gset:Nn \g_lists_clist {supers,types,parts,properties,bools,clists,fadings,angles}
+    \clist_map_inline:Nn \g_lists_clist {
+      \clist_if_exist:cTF {g_##1_clist} {\clist_gclear:c {g_##1_clist}}{\clist_new:c {g_##1_clist}}
+    }
+
+    \clist_gset:Nn \g_types_clist {runner,notches,bead,position}
+    \clist_gset:Nn \g_super_types_clist {bead,runner,term}
+    \clist_gset:Nn \g_parts_clist {body,border,label,shade,fadeout,dots}
+    \clist_gset:Nn \g_properties_clist {scales,colours,styles,alignments,shades,counters,switches,topswitches,bottomswitches,widths,dashedons,dashedoffs,angles,offsets,locations,nums,gaps}
+    \clist_gset:Nn \g_bools_clist {body_shades,body_counters,border_switches,label_switches,fadeout_switches}
+    \clist_gset:Nn \g_clists_clist {border_styles,shade_styles}
+    \clist_gset:Nn \g_fadings_clist {fadeout_style}
+    \clist_gset:Nn \g_angles_clist {label,shade}
+    \clist_map_inline:Nn \g_types_clist {
+      \clist_map_inline:Nn \g_parts_clist {
+        \clist_map_inline:Nn \g_properties_clist {
+          \keys_define:nn {abacus} {
+            ##1_####1_########1.clist_set:c = {l_##1_####1_########1_clist}, ##1_####1_########1.initial:n={},
+          }
+        }
+      } 
+    }
+  }
+
+  \keys_define:nn {abacus} {
+    abacus_reflect.tl_set:N = \l_abacus_reflect_tl, abacus_reflect.initial:n=-1,
+    abacus_rotate.tl_set:N = \l_abacus_rotate_tl, abacus_rotate.initial:n=180,
+    bar.bool_set:N = \l_bar_bool, bar.initial:n=false,
+    bar_style.clist_set:N = \l_bar_style_clist, bar_style.initial:n={},
+    bar_width.tl_set:N = \l_bar_width_tl, bar_width.initial:n=0.015,
+    baseline.tl_set:N = \l_baseline_tl, baseline.initial:n=0,
+    bead_body_colour.tl_set:N = \l_bead_body_colour_tl, bead_body_colour.initial:n=black,
+    bead_body_counter.bool_set:N = \l_bead_body_counter_bool, bead_counter.initial:n=true,
+    bead_body_scale.tl_set:N = \l_bead_body_scale_tl, bead_body_scale.initial:n=0.375,
+    bead_body_shade.bool_set:N = \l_bead_body_shade_bool, bead_body_shade.initial:n=true,
+    bead_border_colour.tl_set:N = \l_bead_border_colour_tl, bead_border_colour.initial:n=black,
+    bead_border_style.clist_set:N = \l_bead_border_style_clist, bead_border_style.initial:n={},
+    bead_border_switch.bool_set:N = \l_bead_border_switch_bool, bead_border_switch.initial:n=false,
+    bead_counter.bool_set:N = \l_bead_counter_bool, bead_counter.initial:n=true,
+    bead_label_alignment.tl_set:N = \l_bead_label_alignment_tl, bead_label_alignment.initial:n=,
+    bead_label_angle.tl_set:N = \l_bead_label_angle_tl, bead_label_angle.initial:n=0,
+    bead_label_colour.tl_set:N = \l_bead_label_colour_tl, bead_label_colour.initial:n=white,
+    bead_label_scale.tl_set:N = \l_bead_label_scale_tl, bead_label_scale.initial:n=5,
+    bead_label_switch.bool_set:N = \l_bead_label_switch_bool, bead_label_switch.initial:n=true,
+    bead_shade_angle.tl_set:N = \l_bead_shade_angle_tl, bead_shade_angle.initial:n=0,
+    bead_shade_style.clist_set:N = \l_bead_shade_style_clist, bead_shade_style.initial:n={},
+    beads.bool_set:N = \l_beads_bool, beads.initial:n=true,
+    body_scale.tl_set:N = \l_body_scale_tl, body_scale.initial:n=0.375,
+    center.clist_set:N = \l_center_clist, center.initial:n={0,0},
+    counter.bool_set:N = \l_counter_bool, counter.initial:n=false,
+    counter_offset.tl_set:N = \l_counter_offset_tl, counter_offset.initial:n=,
+    fayers.bool_set:N = \l_fayers_bool, fayers.initial:n=false,
+    force_center.bool_set:N = \l_force_center_bool, force_center.initial:n=false,
+    horizontal.bool_set:N = \l_horizontal_bool, horizontal.initial:n=false,
+    max_position.tl_set:N = \l_max_position_tl, max_position.initial:n=0,
+    notches.bool_set:N = \l_notches_bool, notches.initial:n=true,
+    notches_body_colour.tl_set:N = \l_notches_body_colour_tl, notches_body_colour.initial:n={},
+    notches_body_style.clist_set:N = \l_notches_body_style_clist, notches_body_style.initial:n={},
+    notches_scale.tl_set:N = \l_notches_scale_tl, notches_scale.initial:n=0.1,
+    notches_width.tl_set:N = \l_notches_width_tl, notches_width.initial:n=0.015,
+    position_body_colour.tl_set:N = \l_position_body_colour_tl, position_body_colour.initial:n=white,
+    position_body_counter.bool_set:N = \l_position_body_counter_bool, position_body_counter.initial:n=true,
+    position_body_scale.tl_set:N = \l_position_body_scale_tl, position_body_scale.initial:n=0.375,
+    position_body_shade.bool_set:N = \l_position_body_shade_bool, position_body_shade.initial:n=false,
+    position_border_colour.tl_set:N = \l_position_border_colour_tl, position_border_colour.initial:n=black,
+    position_border_style.clist_set:N = \l_position_border_style_clist, position_border_style.initial:n={dashed},
+    position_border_switch.bool_set:N = \l_position_border_switch_bool, position_border_switch.initial:n=true,
+    position_counter.bool_set:N = \l_position_counter_bool, position_body_counter.initial:n=true,
+    position_label_alignment.tl_set:N = \l_position_label_alignment_tl, position_label_alignment.initial:n=,
+    position_label_angle.tl_set:N = \l_position_label_angle_tl, position_label_angle.initial:n=0,
+    position_label_colour.tl_set:N = \l_position_label_colour_tl, position_label_colour.initial:n=black,
+    position_label_scale.tl_set:N = \l_position_label_scale_tl, position_label_scale.initial:n=5,
+    position_label_switch.bool_set:N = \l_position_label_switch_bool, position_label_switch.initial:n=true,
+    position_shade_angle.tl_set:N = \l_position_shade_angle_tl, position_shade_angle.initial:n=0,
+    position_shade_style.clist_set:N = \l_position_shade_style_clist, position_shade_style.initial:n={},
+    positions.bool_set:N = \l_positions_bool, positions.initial:n=false,
+    runner_body_colour.tl_set:N = \l_runner_body_colour_tl, runner_body_colour.initial:n=black,
+    runner_body_scale.tl_set:N = \l_runner_body_scale_tl, runner_body_scale.initial:n=0.45,
+    runner_body_style.clist_set:N = \l_runner_body_style_clist, runner_body_style.initial:n={},
+    runner_body_width.tl_set:N = \l_runner_body_width_tl, runner_body_width.initial:n=0.015,
+    runner_dots_bottomswitch.bool_set:N = \l_runner_dots_bottomswitch_bool, runner_dots_bottomswitch.initial:n=true,
+    runner_dots_colour.tl_set:N = \l_runner_dots_colour_tl, runner_dots_colour.initial:n=black,
+    runner_dots_gap.tl_set:N = \l_runner_dots_gap_tl, runner_dots_gap.initial:n=0.25,
+    runner_dots_num.tl_set:N = \l_runner_dots_num_tl, runner_dots_num.initial:n=3,
+    runner_dots_offset.tl_set:N = \l_runner_dots_offset_tl, runner_dots_offset.initial:n=0,
+    runner_dots_scale.tl_set:N = \l_runner_dots_scale_tl, runner_dots_scale.initial:n=0.03,
+    runner_dots_style.tl_set:N = \l_runner_dots_style_tl, runner_dots_style.initial:n=1,
+    runner_dots_switch.bool_set:N = \l_runner_dots_switch_bool, runner_dots_switch.initial:n=false,
+    runner_dots_topswitch.bool_set:N = \l_runner_dots_topswitch_bool, runner_dots_topswitch.initial:n=true,
+    runner_fadeout_colour.tl_set:N = \l_runner_fadeout_colour_tl, runner_fadeout_colour.initial:n=black,
+    runner_fadeout_dashed.bool_set:N = \l_runner_fadeout_dashed_bool, runner_fadeout_dashed.initial:n=false,
+    runner_fadeout_dashedoff.tl_set:N = \l_runner_fadeout_dashedoff_tl, runner_fadeout_dashedoff.initial:n=0.01,
+    runner_fadeout_dashedon.tl_set:N = \l_runner_fadeout_dashedon_tl, runner_fadeout_dashedon.initial:n=0.01,
+    runner_fadeout_scale.tl_set:N = \l_runner_fadeout_scale_tl, runner_fadeout_scale.initial:n=0.3,
+    runner_fadeout_style.clist_set:N = \l_runner_fadeout_style_clist, runner_fadeout_style.initial:n={bottom~color=transparent!0,top~color=transparent!100,middle~color=transparent!0},
+    runner_fadeout_switch.bool_set:N = \l_runner_fadeout_switch_bool, runner_fadeout_switch.initial:n=false,
+    runner_label_alignment.tl_set:N = \l_runner_label_alignment_tl, runner_label_alignment.initial:n=,
+    runner_label_angle.tl_set:N = \l_runner_label_angle_tl, runner_label_angle.initial:n=0,
+    runner_label_colour.tl_set:N = \l_runner_label_colour_tl, runner_label_colour.initial:n=black,
+    runner_label_location.tl_set:N = \l_runner_label_location_tl, runner_label_location.initial:n=base,
+    runner_label_offset.tl_set:N = \l_runner_label_offset_tl, runner_label_offset.initial:n=0.4,
+    runner_label_scale.tl_set:N = \l_runner_label_scale_tl, runner_label_scale.initial:n=5,
+    runner_label_style.clist_set:N = \l_runner_label_style_clist, runner_label_style.initial:n={},
+    runner_label_switch.bool_set:N = \l_runner_label_switch_bool, runner_label_switch.initial:n=false,
+    scale.tl_set:N = \l_scale_tl, scale.initial:n=1,
+    shade.bool_set:N = \l_shade_bool, shade.initial:n=true,
+    show_axis.bool_set:N = \l_show_axis_bool, show_axis.initial:n=false,
+    show_boundary.bool_set:N = \l_show_boundary_bool, show_boundary.initial:n=false,
+    show_center.bool_set:N = \l_show_center_bool, show_center.initial:n=false,
+    vertical.bool_set:N = \l_vertical_bool, vertical.initial:n=false,
+    x_alignment.tl_set:N = \l_x_alignment_tl, x_alignment.initial:n=0,
+    x_center_offset.tl_set:N = \l_x_center_offset_tl, x_center_offset.initial:n=0,
+    x_gap_scale.tl_set:N = \l_x_gap_scale_tl, x_gap_scale.initial:n=1,
+    x_scale.tl_set:N = \l_x_scale_tl, x_scale.initial:n=0.45,
+    y_alignment.tl_set:N = \l_y_alignment_tl, y_alignment.initial:n=0,
+    y_center_offset.tl_set:N = \l_y_center_offset_tl, y_center_offset.initial:n=0,
+    y_gap_scale.tl_set:N = \l_y_gap_scale_tl, y_gap_scale.initial:n=0.85,
+    y_scale.tl_set:N = \l_y_scale_tl, y_scale.initial:n=0.45,
+    y_shift.tl_set:N = \l_y_shift_tl, y_shift.initial:n=-0.5ex,
+  }
+
+  \DeclareDocumentCommand \abacus{omm}{
+    \group_begin:
+      \clist_set_globals:
+      \IfNoValueF{#1}{\keys_set:nn {abacus}{#1}} %Setting Parameters
+      \bool_if:NTF \l_fayers_bool {
+        \keys_set:nn {abacus}{
+          bead_label_switch=false,baseline=-0.05,runner_body_scale=0.48,y_gap_scale=0.84
+        }
+      }{}
+      \tl_if_exist:NTF \l_q_tl {\tl_clear:N \l_q_tl}{\tl_new:N \l_q_tl}
+      \tl_if_exist:NTF \l_beta_tl {\tl_clear:N \l_beta_tl}{\tl_new:N \l_beta_tl}
+      \tl_if_exist:NTF \l_angle_tl {\tl_clear:N \l_angle_tl}{\tl_new:N \l_angle_tl}
+      \tl_set:Nf \l_q_tl {#2}
+      \tl_set:Nf \l_beta_tl {#3}
+      \tl_set:Nx \l_tmpa_tl {\fp_eval:n { floor (\l_abacus_rotate_tl) }}
+      \tl_set:Nx \l_tmpb_tl {\fp_eval:n { \l_abacus_rotate_tl-\l_tmpa_tl}}
+      \tl_set:Nx \l_tmpc_tl {\int_mod:nn {\l_tmpa_tl}{360}}
+      \tl_set:Nx \l_angle_tl {\fp_eval:n {\l_tmpc_tl + \l_tmpb_tl}}
+      \tl_if_exist:NTF \l_columns_tl {\tl_clear:N \l_columns_tl}{\tl_new:N \l_columns_tl}
+      \tl_set_eq:NN \l_columns_tl \l_q_tl
+      \tl_if_exist:NTF \l_rows_tl {\tl_clear:N \l_rows_tl}{\tl_new:N \l_rows_tl}
+      \tl_set:Nx \l_rows_tl {\int_div_truncate:nn {\l_max_position_tl}{\l_columns_tl}} 
+      \seq_if_exist:NTF \l_beads_seq {\seq_clear:N \l_beads_seq}{\seq_new:N \l_beads_seq}   
+      \seq_set_split:NnV \l_beads_seq {,} {\l_beta_tl}
+      \clist_map_inline:Nn \g_properties_clist {
+        \clist_map_inline:Nn \g_parts_clist {
+          \clist_map_inline:Nn \g_types_clist {
+            \seq_if_exist:cTF {l_########1_####1_##1_seq} {\seq_clear:c {l_########1_####1_##1_seq}}{\seq_new:c {l_########1_####1_##1_seq}}
+            \tl_if_exist:cTF {l_########1_####1_##1_tl} {\tl_clear:c {l_########1_####1_##1_tl}}{\tl_new:c {l_########1_####1_##1_tl}}
+            \bool_if_exist:cTF {l_########1_####1_##1_bool} {\bool_set_false:c {l_########1_####1_##1_bool}}{\bool_new:c {l_########1_####1_##1_bool}}
+            \clist_if_exist:cTF {l_########1_####1_##1_clist} {}{\clist_new:c {l_########1_####1_##1_clist}}
+            \clist_map_inline:cn {l_########1_####1_##1_clist} {
+              \seq_set_split:Nnn \l_tmpa_seq {/} {################1}
+              \seq_get_left:NN \l_tmpa_seq \l_tmpa_tl
+              \seq_put_right:cV {l_########1_####1_##1_seq} {\l_tmpa_tl}
+            }
+          }
+        }
+      }
+      \seq_map_inline:Nn \l_beads_seq {
+        \tl_clear:N \l_tmpa_tl
+        \tl_set:Nx \l_tmpa_tl {\int_div_truncate:nn {##1}{\l_columns_tl}}
+        \int_compare:nNnTF {\l_tmpa_tl} > {\l_rows_tl} {\tl_set:NV \l_rows_tl {\l_tmpa_tl}}{}
+      }
+      \bool_if:NTF \l_runner_fadeout_dashed_bool {
+        \clist_put_right:Nn \l_runner_fadeout_style_clist {dashed}
+        \fp_set:Nn \l_tmpa_fp {\l_runner_fadeout_dashedon_tl * \l_y_gap_scale_tl}
+        \fp_set:Nn \l_tmpb_fp {\l_runner_fadeout_dashedoff_tl * \l_y_gap_scale_tl}
+        \tl_set:Nx \l_tmpa_tl {dash~pattern=on~\fp_use:N \l_tmpa_fp cm~off~ \fp_use:N \l_tmpb_fp cm}
+        \clist_put_right:NV \l_runner_fadeout_style_clist {\l_tmpa_tl}
+      }{}
+        \scalebox{\l_scale_tl}{
+          \begin{tikzpicture}[x=\l_x_scale_tl~cm,y=\l_y_scale_tl~cm,baseline={([yshift=\l_y_shift_tl]0,\l_baseline_tl~cm)},rotate=\l_abacus_rotate_tl]
+            \begin{scope}[xscale=\l_abacus_reflect_tl,yscale=1]
+              \tl_if_exist:NTF \l_x_center_tl {\tl_clear:N \l_x_center_tl}{\tl_new:N \l_x_center_tl}
+              \tl_if_exist:NTF \l_y_center_tl {\tl_clear:N \l_y_center_tl}{\tl_new:N \l_y_center_tl}
+              \tl_if_exist:NTF \l_x_center_offset_tl {\tl_clear:N \l_x_center_offset_tl}{\tl_new:N \l_x_center_offset_tl}
+              \tl_if_exist:NTF \l_y_center_offset_tl {\tl_clear:N \l_y_center_offset_tl}{\tl_new:N \l_y_center_offset_tl}
+              \clist_pop:NN \l_center_clist \l_x_center_tl
+              \clist_pop:NN \l_center_clist \l_y_center_tl
+              \coordinate (C) at (\l_x_center_tl*\l_x_gap_scale_tl,\l_y_center_tl*\l_y_gap_scale_tl) ;
+              \ifthenelse{\equal{\l_x_alignment_tl}{-1}}{
+                \tl_set:Nn \l_x_center_offset_tl {0} 
+              }{}
+              \ifthenelse{\equal{\l_x_alignment_tl}{0}}{
+                \tl_set:Nx \l_x_center_offset_tl {\l_columns_tl / 2 - 0.5} 
+              }{}
+              \ifthenelse{\equal{\l_x_alignment_tl}{1}}{
+                \tl_set:NV \l_x_center_offset_tl {\l_columns_tl-1} 
+              }{}
+              \ifthenelse{\equal{\l_y_alignment_tl}{-1}}{
+                \tl_set:Nn \l_y_center_offset_tl {0} 
+              }{}
+              \ifthenelse{\equal{\l_y_alignment_tl}{0}}{
+                \tl_set:Nx \l_y_center_offset_tl {\l_rows_tl / 2} 
+              }{}
+              \ifthenelse{\equal{\l_y_alignment_tl}{1}}{
+                \tl_set:NV \l_y_center_offset_tl {\l_rows_tl} 
+              }{}
+              \coordinate (M) at (\l_x_center_offset_tl*\l_x_gap_scale_tl,\l_y_center_offset_tl*\l_y_gap_scale_tl) ;
+              \exp_args:Nx \tikzset{mybarstyle/.style={\clist_use:Nn \l_bar_style_clist {,}}}
+              \bool_if:NTF \l_bar_bool {
+                \bool_set_false:N \l_runner_dots_topswitch_bool
+                \coordinate (A) at ($(0,-\l_y_gap_scale_tl*\l_runner_body_scale_tl) + (C)-(M)$);
+                \coordinate (B) at ($(A) + (\l_x_gap_scale_tl*\l_columns_tl-\l_x_gap_scale_tl,0)$);
+                \draw[line~width=\l_bar_width_tl~cm,mybarstyle] (A) -- (B) ;
+              }{} %Drawing bar
+              \bool_if:NTF \l_shade_bool {}{
+                \bool_set_false:N \l_bead_shade_bool
+                \bool_set_false:N \l_position_shade_bool
+              } % Setting Shade Bool
+              \bool_if:NTF \l_runner_fadeout_switch_bool {
+                \bool_set_false:N \l_runner_dots_bottomswitch_bool
+              }{}
+              \foreach[parse=true] \col in {0,...,\l_columns_tl-1} {
+                \exp_args:Nx \tikzset{myrunnerbodystyles/.style={\clist_use:Nn \l_runner_body_style_clist {,}}}
+                \exp_args:Nx \tikzset{myrunnerlabelstyles/.style={\clist_use:Nn \l_runner_label_style_clist {,}}}
+                \tl_set:NV \l_term_body_scales_tl {\l_runner_body_scale_tl}
+                \tl_set:NV \l_term_body_colours_tl {\l_runner_body_colour_tl}
+                \tl_set:NV \l_term_body_widths_tl {\l_runner_body_width_tl}
+                \tl_set:NV \l_term_label_colours_tl {\l_runner_label_colour_tl}
+                \tl_set:NV \l_term_label_alignments_tl {\l_runner_label_alignment_tl}
+                \tl_set:NV \l_term_label_scales_tl {\l_runner_label_scale_tl}
+                \tl_set:NV \l_term_label_offsets_tl {\l_runner_label_offset_tl}
+                \tl_set:NV \l_term_label_angles_tl {\l_runner_label_angle_tl}
+                \tl_set:NV \l_term_label_locations_tl {\l_runner_label_location_tl}
+                \tl_set:NV \l_term_fadeout_scales_tl {\l_runner_fadeout_scale_tl}
+                \tl_set:NV \l_term_fadeout_colours_tl {\l_runner_fadeout_colour_tl}
+                \tl_set:NV \l_term_dots_nums_tl {\l_runner_dots_num_tl}
+                \tl_set:NV \l_term_dots_offsets_tl {\l_runner_dots_offset_tl}
+                \tl_set:NV \l_term_dots_scales_tl {\l_runner_dots_scale_tl}
+                \tl_set:NV \l_term_dots_colours_tl {\l_runner_dots_colour_tl}
+                \tl_set:NV \l_term_dots_styles_tl {\l_runner_dots_style_tl}
+                \tl_set:NV \l_term_dots_gaps_tl {\l_runner_dots_gap_tl}
+                \bool_set_eq:NN \l_term_dots_switches_bool {\l_runner_dots_switch_bool}
+                \bool_set_eq:NN \l_term_dots_topswitches_bool {\l_runner_dots_topswitch_bool}
+                \bool_set_eq:NN \l_term_dots_bottomswitches_bool {\l_runner_dots_bottomswitch_bool}
+                \bool_set_eq:NN \l_term_fadeout_switches_bool \l_runner_fadeout_switch_bool
+                \bool_set_eq:NN \l_term_label_switches_bool \l_runner_label_switch_bool
+                \clist_set_eq:NN \l_term_fadeout_styles_clist \l_runner_fadeout_style_clist 
+                \seq_set_from_clist:NN \l_term_fadeout_styles_seq \l_term_fadeout_styles_clist
+                \seq_put_left:Nn \l_term_fadeout_styles_seq {name=myrunnerfadeoutstyles}
+                \tl_set:Nx \l_term_fadeout_styles_tl {\seq_use:Nn \l_term_fadeout_styles_seq {,}}
+                \begin{pgfinterruptboundingbox}
+                  \exp_args:NNV \tikzfading [ \l_term_fadeout_styles_tl ]
+                \end{pgfinterruptboundingbox}
+                \clist_map_inline:Nn \g_parts_clist {
+                  \clist_map_inline:Nn \g_properties_clist {
+                    \seq_if_in:cVTF {l_runner_####1_########1_seq} {\col} {
+                      \clist_map_inline:cn {l_runner_####1_########1_clist}{
+                				\seq_set_split:Nnn \l_tmpa_seq {/} {################1}
+                				\seq_get_left:NN \l_tmpa_seq \l_tmpa_tl
+                				\seq_get_right:NN \l_tmpa_seq \l_tmpb_tl
+                				\ifthenelse{\equal{\l_tmpa_tl}{\col}}{
+                					\clist_if_in:NnTF \g_bools_clist {####1_########1}{
+                						\bool_set_from_tl:NN \l_tmpa_bool \l_tmpb_tl
+                						\bool_set_eq:cN {l_term_####1_########1_bool} \l_tmpa_bool
+                					}{
+                						\tl_set_eq:cN {l_term_####1_########1_tl} \l_tmpb_tl
+                						\clist_if_in:NnTF \g_fadings_clist {####1_########1}{
+                              \begin{pgfinterruptboundingbox}
+                                \tikzfading[name=my runner ####1 ########1,\l_tmpb_tl]
+                              \end{pgfinterruptboundingbox}
+                            }{
+                              \exp_args:Nx \tikzset{my runner ####1 ########1/.style={\tl_use:N \l_tmpb_tl}}
+                            }
+                					}
+                				}{}
+                			}
+                		}{}
+                	}
+                }
+                \coordinate (C) at (\l_x_center_tl*\l_x_gap_scale_tl,\l_y_center_tl*\l_y_gap_scale_tl) ;
+                \coordinate (M) at (\l_x_center_offset_tl*\l_x_gap_scale_tl,\l_y_center_offset_tl*\l_y_gap_scale_tl) ;
+                \path[overlay] coordinate (O) at ($(\l_x_gap_scale_tl*\col,0)+(C)-(M)$);
+                \path[overlay] coordinate (AA) at ($(O)-(0,\l_y_gap_scale_tl*\l_runner_body_scale_tl)$);
+                \path[overlay] coordinate (AB) at ($(AA)-(0,\l_bar_width_tl)$);
+                \path[overlay] coordinate (BA) at ($(O)+(0,\l_y_gap_scale_tl*\l_rows_tl)$);
+                \path[overlay] coordinate (BB) at ($(BA) +(0,\l_y_gap_scale_tl*\l_runner_body_scale_tl)$);	
+                \draw[line~width=\l_term_body_widths_tl~cm,myrunnerbodystyles] (AB) -- (BA);
+                \str_if_eq:eeTF {\l_term_label_locations_tl}{base}{
+                  \path[overlay] coordinate (AC) at ($(AA) - (0,\l_term_label_offsets_tl*\l_y_gap_scale_tl)$);
+                }{}
+                \str_if_eq:eeTF {\l_term_label_locations_tl}{end}{
+                  \path[overlay] coordinate (AC) at ($(BB) + (0,\l_term_label_offsets_tl*\l_y_gap_scale_tl)$);
+                }{}
+                \bool_if:NTF \l_term_fadeout_switches_bool {
+                	\path[overlay] coordinate (D) at ($(BB) + (0,\l_y_gap_scale_tl*\l_term_fadeout_scales_tl)$);
+                 \coordinate (BAD) at ($0.5*(D) + 0.5*(BA)$);
+                  \begin{scope}
+                    \pgftransformresetnontranslations
+                    \use:x{\exp_not:N \tikzset{rotation/.style={rotate~around={\l_abacus_rotate_tl\c_colon_str (BAD)}}}}
+                    \use:x{\exp_not:N \tikzset{antirotation/.style={rotate~around={-\l_abacus_rotate_tl\c_colon_str (BAD)}}}}
+                    \draw [transform~canvas=rotation,draw=\l_term_fadeout_colours_tl,path~fading=myrunnerfadeoutstyles,line~width=\l_term_body_widths_tl~cm] ([antirotation]BA) -- ([antirotation]D);
+                    \fill[red] (BA) circle (0.05);
+                  \end{scope}
+                }{
+                  \draw[line~width=\l_term_body_widths_tl~cm,myrunnerbodystyles] (BA) -- (BB);
+                }
+                \bool_if:NTF \l_term_dots_switches_bool {
+                  \foreach[parse=true] \dots in {1,...,\l_term_dots_nums_tl}{
+                    \coordinate (ADOT) at ($(AB) - (0,\l_y_gap_scale_tl*\l_term_dots_offsets_tl) - (0,\dots*\l_y_gap_scale_tl*\l_term_dots_gaps_tl)$);
+                    \coordinate (BDOT) at ($(BB) + (0,\l_y_gap_scale_tl*\l_term_dots_offsets_tl) + (0,\dots*\l_y_gap_scale_tl*\l_term_dots_gaps_tl)$); 
+                    \bool_if:NTF \l_term_dots_topswitches_bool{
+                      \fill[fill=\l_term_dots_colours_tl] (ADOT) circle (\l_term_dots_scales_tl);
+                    }{}
+                    \bool_if:NTF \l_term_dots_bottomswitches_bool{
+                      \fill[fill=\l_term_dots_colours_tl] (BDOT) circle (\l_term_dots_scales_tl);
+                    }{}
+                  }
+                }{
+
+                }
+                \bool_if:NTF \l_term_label_switches_bool {
+                	\draw (AC) node[rotate=\l_term_label_angles_tl,\l_term_label_alignments_tl, myrunnerlabelstyles,text=\l_term_label_colours_tl,font=\fontsize{\l_term_label_scales_tl pt}{\dimexpr \l_term_label_scales_tl pt + 1pt}\selectfont] {\col}; 
+                }{}
+              
+              } %Drawing Runners
+              \foreach[parse=true] \row [count=\nrow] in {0,...,\l_rows_tl}{
+                \foreach[parse=true] \col [count=\ncol] in {0,...,\l_columns_tl-1}{
+                  \tl_if_exist:NTF \l_term_tl {\tl_clear:N \l_term_tl} {\tl_new:N \l_term_tl} %Resetting the term variable
+                  \tl_set:Nx \l_term_tl { \int_eval:n {\l_columns_tl*\row + \col}}
+                  \path[overlay] coordinate (X) at ($(\l_x_gap_scale_tl*\col,\l_y_gap_scale_tl*\row) + (C)-(M)$);
+                  \bool_if_exist:NTF \l_term_bool {\bool_set_true:N \l_term_bool}{\bool_new:N \l_term_bool}
+                  \seq_if_in:NVTF \l_beads_seq {\l_term_tl} {
+                    \bool_set_true:N \l_bead_bool
+                    \bool_set_false:N \l_position_bool
+                    \bool_if:NTF \l_beads_bool {\bool_set_true:N \l_term_bool}{\bool_set_false:N \l_term_bool}
+                  }{
+                    \bool_set_false:N \l_bead_bool
+                    \bool_set_true:N \l_position_bool
+                    \bool_if:NTF \l_positions_bool {\bool_set_true:N \l_term_bool}{\bool_set_false:N \l_term_bool}
+                  }
+
+                  \bool_if:NTF \l_bead_bool {
+                    \tl_set:NV \l_term_body_scales_tl {\l_bead_body_scale_tl}
+                    \tl_set:NV \l_term_body_colours_tl {\l_bead_body_colour_tl}
+                    \tl_set:NV \l_term_border_colours_tl {\l_bead_border_colour_tl}
+                    \tl_set:NV \l_term_label_colours_tl {\l_bead_label_colour_tl}
+                    \tl_set:NV \l_term_label_alignments_tl {\l_bead_label_alignment_tl}
+                    \tl_set:NV \l_term_label_scales_tl {\l_bead_label_scale_tl}
+                    \tl_set:NV \l_term_label_angles_tl {\l_bead_label_angle_tl}
+                    \tl_set:NV \l_term_shade_angles_tl {\l_bead_shade_angle_tl}
+                    \tl_set:Nx \l_term_border_styles_tl {\clist_use:Nn \l_bead_border_style_clist {,}}
+                    \tl_set:Nx \l_term_shade_styles_tl {\clist_use:Nn \l_bead_shade_style_clist {,}}
+                    \bool_set_eq:NN \l_term_border_switches_bool \l_bead_border_switch_bool
+                    \bool_set_eq:NN \l_term_body_shades_bool \l_bead_body_shade_bool
+                    \bool_set_eq:NN \l_term_body_counters_bool \l_bead_body_counters_bool
+                    \bool_set_eq:NN \l_term_label_switches_bool \l_bead_label_switch_bool
+                    \clist_map_inline:Nn \g_parts_clist {
+                      \clist_map_inline:Nn \g_properties_clist {
+                        \seq_if_in:cVTF {l_bead_########1_################1_seq} {\l_term_tl} {
+                          \clist_map_inline:cn {l_bead_########1_################1_clist}{
+                            \seq_set_split:Nnn \l_tmpa_seq {/} {################################1}
+                            \seq_get_left:NN \l_tmpa_seq \l_tmpa_tl
+                            \seq_get_right:NN \l_tmpa_seq \l_tmpb_tl
+                            \tl_if_eq:NNTF \l_tmpa_tl \l_term_tl {
+                              \clist_if_in:NnTF \g_bools_clist {########1_################1}{
+                                \bool_set_from_tl:NN \l_tmpa_bool \l_tmpb_tl
+                                \bool_set_eq:cN {l_term_########1_################1_bool} \l_tmpa_bool
+                              }{
+                                \tl_set_eq:cN {l_term_########1_################1_tl} \l_tmpb_tl
+                              }
+                            }{}
+                          }
+                        }{}
+                      }
+                    }
+                  }{}
+                  \bool_if:NTF \l_position_bool {
+                    \tl_set:NV \l_term_body_scales_tl {\l_position_body_scale_tl}
+                    \tl_set:NV \l_term_body_colours_tl {\l_position_body_colour_tl}
+                    \tl_set:NV \l_term_border_colours_tl {\l_position_border_colour_tl}
+                    \tl_set:NV \l_term_label_colours_tl {\l_position_label_colour_tl}
+                    \tl_set:NV \l_term_label_alignments_tl {\l_position_label_alignment_tl}
+                    \tl_set:NV \l_term_label_scales_tl {\l_position_label_scale_tl}
+                    \tl_set:NV \l_term_label_angles_tl {\l_position_label_angle_tl}
+                    \tl_set:NV \l_term_shade_angles_tl {\l_position_shade_angle_tl}
+                    \tl_set:Nx \l_term_border_styles_tl {\clist_use:Nn \l_position_border_style_clist {,}}
+                    \tl_set:Nx \l_term_shade_styles_tl {\clist_use:Nn \l_position_shade_style_clist {,}}
+                    \bool_set_eq:NN \l_term_border_switches_bool \l_position_border_switch_bool
+                    \bool_set_eq:NN \l_term_body_shades_bool \l_position_body_shade_bool
+                    \bool_set_eq:NN \l_term_body_counters_bool \l_position_body_counters_bool
+                    \bool_set_eq:NN \l_term_label_switches_bool \l_position_label_switch_bool
+                    \clist_map_inline:Nn \g_parts_clist {
+                      \clist_map_inline:Nn \g_properties_clist {
+                        \seq_if_in:cVTF {l_position_########1_################1_seq} {\l_term_tl} {
+                          \clist_map_inline:cn {l_position_########1_################1_clist}{
+                            \seq_set_split:Nnn \l_tmpa_seq {/} {################################1}
+                            \seq_get_left:NN \l_tmpa_seq \l_tmpa_tl
+                            \tl_if_eq:NNTF \l_tmpa_tl \l_term_tl {
+                              \clist_if_in:NnTF \g_bools_clist {########1_################1}{
+                                \bool_set_from_tl:NN \l_tmpa_bool \l_tmpb_tl
+                                \bool_set_eq:cN {l_term_########1_################1_bool} \l_tmpa_bool
+                              }{
+                                \tl_set_eq:cN {l_term_########1_################1_tl} \l_tmpb_tl
+                              }
+                            }{}
+                          }
+                        }{}
+                      }
+                    }
+                  }{}
+                  \bool_if:NTF \l_term_bool {
+                    \exp_args:Nx \tikzset{myborderstyle/.style={\tl_use:N \l_term_border_styles_tl}}
+                    \exp_args:Nx \tikzset{myshadestyle/.style={\tl_use:N \l_term_shade_styles_tl}}
+                    \bool_if:NTF \l_shade_bool {}{\bool_set_false:N \l_term_body_shades_bool}
+                      \bool_if:NTF \l_term_body_shades_bool {
+                        \bool_if:NTF \l_term_border_switches_bool {
+                          \shade[ball~color=\l_term_body_colours_tl,draw=\l_term_border_colours_tl,myshadestyle,myborderstyle,shading~angle=\l_term_shade_angles_tl] (X) circle (\l_term_body_scales_tl);
+                        }{
+                          \shade[ball~color=\l_term_body_colours_tl,myshadestyle,shading~angle=\l_term_shade_angles_tl] (X) circle (\l_term_body_scales_tl);
+                        }
+                      }{
+                      \bool_if:NTF \l_term_border_switches_bool {
+                          \draw[fill=\l_term_body_colours_tl,draw=\l_term_border_colours_tl,myborderstyle] (X) circle (\l_term_body_scales_tl);
+                        }{
+                          \draw[fill=\l_term_body_colours_tl] (X) circle (\l_term_body_scales_tl);
+                        }
+                      }
+                      \bool_if:NTF \l_term_label_switches_bool {
+                        \draw (X) node[rotate=\l_term_label_angles_tl,\l_term_label_alignments_tl,text=\l_term_label_colours_tl,font=\fontsize{\l_term_label_scales_tl pt}{\dimexpr \l_term_label_scales_tl pt + 1pt}\selectfont] {\l_term_tl}; 
+                      }{}
+                  }{
+                    \bool_if:NTF \l_notches_bool {
+                      \seq_if_in:cVTF {l_notches_body_styles_seq} {\l_term_tl} {
+                        \clist_map_inline:Nn \l_notches_body_styles_clist {
+                          \seq_set_split:Nnn \l_tmpa_seq {/} {########1}
+                          \seq_get_left:NN \l_tmpa_seq \l_tmpa_tl
+                          \seq_get_right:NN \l_tmpa_seq \l_tmpb_tl
+                          \tl_if_eq:NNTF \l_tmpa_tl \l_term_tl {
+                            \exp_args:Nx \tikzset{mynotchesstyle/.style={\tl_use:N \l_tmpb_tl}}
+                          }{}
+                        }
+                      }{
+                        \exp_args:Nx \tikzset{mynotchesstyle/.style={\clist_use:Nn \l_notches_body_style_clist {,}}}
+                      }
+                      \tl_set:NV \l_term_body_colours_tl {\l_notches_body_colour_tl}
+                      \seq_if_in:cVTF {l_notches_body_colours_seq} {\l_term_tl} {
+                        \clist_map_inline:Nn \l_notches_body_colours_clist {
+                          \seq_set_split:Nnn \l_tmpa_seq {/} {########1}
+                          \seq_get_left:NN \l_tmpa_seq \l_tmpa_tl
+                          \seq_get_right:NN \l_tmpa_seq \l_tmpb_tl
+                          \tl_if_eq:NNTF \l_tmpa_tl \l_term_tl {
+                            \tl_set_eq:NN \l_term_body_colours_tl \l_tmpb_tl
+                          }{}
+                        }
+                      }{}
+                      \draw[line~width=\l_notches_width_tl~cm,draw=\l_term_body_colours_tl,mynotchesstyle] ($(X)-(\l_notches_scale_tl,0)$) -- ($(X)+(\l_notches_scale_tl,0)$);
+                    }{}
+                  }
+                }
+              } %Drawing beads/notches
+              \bool_if:NTF \l_force_center_bool {
+                \path ($(current~bounding~box.south~west)!2!(0,0)$);
+                \path ($(current~bounding~box.north~east)!2!(0,0)$);
+              }{}
+              \bool_if:NTF \l_show_boundary_bool {
+                \draw[blue,dashed] (current~bounding~box.north~west) -- (current~bounding~box.north~east) -- (current~bounding~box.south~east) -- (current~bounding~box.south~west) -- cycle;
+              }{}
+              \bool_if:NTF \l_show_center_bool {
+                \fill [red] (current~bounding~box.center) circle (0.1);
+              }{}
+              \bool_if:NT \l_show_axis_bool{
+                \draw[red] (-3,0)--(3,0);
+                \draw[red] (0,-3) -- (0,3);
+              }  
+            \end{scope}
+          \end{tikzpicture}
+        }
+    \group_end:
+  }
+
+
+
+\DeclareDocumentCommand \fabacus{om}{
+  \clist_set:Nn \l_tmpa_clist {#2}
+  \clist_set:Nn \l_tmpb_clist {}
+  \tl_set:Nn \l_tmpa_tl {0}
+  \int_set:Nn \l_tmpa_int {-1}
+  \int_set:Nn \l_tmpb_int {-1}
+  \clist_map_inline:Nn \l_tmpa_clist {
+    \int_incr:N \l_tmpb_int
+    \str_map_inline:nn {##1} {
+      \int_incr:N \l_tmpa_int
+      \str_if_eq:eeTF {####1}{b} {
+        \clist_put_right:NV \l_tmpb_clist {\l_tmpa_int}
+      }{}     
+    }
+    \tl_set:Nx \l_tmpc_tl {\int_use:N \l_tmpb_int}
+    \str_if_eq:eeTF {\int_use:N \l_tmpb_int} {0} {
+      \int_new:N \l_tmpc_int
+      \int_set:Nn \l_tmpc_int {\l_tmpa_int+1}
+    }{}
+  }
+  \tl_set:NV \l_tmpa_tl {\l_tmpc_int}
+  \tl_set:Nx \l_tmpb_tl {\clist_use:Nn \l_tmpb_clist {,}}
+  \IfNoValueTF{#1}{
+    \abacus[fayers]{\l_tmpa_tl}{\l_tmpb_tl} 
+  }{
+    \abacus[#1,fayers]{\l_tmpa_tl}{\l_tmpb_tl}   
+  }
+} 
+
+\ExplSyntaxOff
